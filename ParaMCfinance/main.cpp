@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     }
 
 
-    interval=0.05; initial_money=1; numAgents=500; numTransactions=1000000; total_experiments=100; lambda=0;
+    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; lambda=0;
 
     vec histogram(60), agents(numAgents), total_histogram(60);
     int my_experiments=total_experiments/numprocs;
@@ -55,6 +55,9 @@ int main(int argc, char* argv[])
     }
 
     for(int i=0;i<my_experiments; i++){
+        if(i%25==0){
+            cout << my_rank<< " " << i<<"\n";
+        }
         initialize(agents, initial_money);
         transactions(agents, numTransactions, lambda, my_rank, numAgents);
         addToHistogram(agents, histogram, interval);
