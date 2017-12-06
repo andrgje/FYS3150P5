@@ -18,7 +18,7 @@ using namespace std;
 //Function to initialize agents
 void initialize(vec&, double);
 //Function for simulating the transactions
-void transactions(vec&, int, double);
+void transactions(vec&, int, double, int, int);
 //Function to register income in given intervals
 void addToHistogram(vec&, vec&, double);
 //Print the results to file
@@ -46,22 +46,30 @@ int main(int argc, char* argv[])
     }
 
 
-    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000; total_experiments=1000; lambda=0;
+    interval=0.05; initial_money=1; numAgents=500; numTransactions=1000000; total_experiments=100; lambda=0;
 
-    vec histogram(60), total_histogram(60), agents(numAgents);
+    vec histogram(60), agents(numAgents), total_histogram(60);
     int my_experiments=total_experiments/numprocs;
+    if(my_rank==1){
+        my_experiments+=total_experiments%numprocs;
+    }
 
     for(int i=0;i<my_experiments; i++){
-        cout << my_rank << i;
         initialize(agents, initial_money);
-        transactions(agents, numTransactions, lambda);
+        transactions(agents, numTransactions, lambda, my_rank, numAgents);
         addToHistogram(agents, histogram, interval);
 
-    }
-    for( int i =0; i < 60; i++){
-      MPI_Reduce(&histogram[i], &total_histogram[i], 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+        for(int j =0; j < 60; j++){
+          MPI_Reduce(&histogram[j], &total_histogram[j], 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+        }
+
     }
 
+
+    //Write to file
+    if(my_rank==0){
+        outputToFile(total_histogram, total_experiments);
+    }
     // End MPI
     MPI_Finalize ();
 
@@ -74,7 +82,7 @@ void initialize(vec& agents, double initial_money){
 }
 
 //Function for simulating the transactions
-void transactions(vec& agents, int numTransactions, double lambda){
+void transactions(vec& agents, int numTransactions, double lambda, int my_rank, int numAgents){
     int agentI, agentJ;
     double epsilon, newAgentI, newAgentJ, totalMoney;
 
@@ -86,14 +94,13 @@ void transactions(vec& agents, int numTransactions, double lambda){
 
     for(int k = 0; k<numTransactions;k++){
         //Pick two random agents
-        agentI=(int) RandomNumberGenerator(gen)*500;
-        agentJ=(int) RandomNumberGenerator(gen)*500;
+        agentI=(int) (RandomNumberGenerator(gen)*numAgents);
+        agentJ=(int) (RandomNumberGenerator(gen)*numAgents);
 
         epsilon=RandomNumberGenerator(gen);
 
         //Sum of money that both agents have
         totalMoney=(1-lambda)*(agents[agentI]+agents[agentJ]);
-        double m1 = agents[agentI];
         //Calculate new values for both agents
         newAgentI=lambda*agents[agentI]+epsilon*totalMoney;
         newAgentJ=lambda*agents[agentJ]+(1-epsilon)*totalMoney;
@@ -102,7 +109,15 @@ void transactions(vec& agents, int numTransactions, double lambda){
         //Set new values for both agents
         agents[agentI]=newAgentI;
         agents[agentJ]=newAgentJ;
+
     }
+    /*double sum=0;
+    for (int i = 0;i<10;i++){
+        cout << my_rank <<" " << agents[i]<<","<<i<<"\n";
+        sum+=agents[i];
+
+    }
+    cout << my_rank<< " " <<sum<<"\n";*/
 }
 
 void addToHistogram(vec& agents, vec& histogram, double interval){
