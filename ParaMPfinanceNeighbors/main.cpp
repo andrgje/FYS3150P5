@@ -89,6 +89,13 @@ void transactions(vec& agents, int numTransactions, double lambda, int my_rank, 
     int agentI, agentJ;
     double epsilon, newAgentI, newAgentJ, totalMoney;
 
+    mat transactionCount(numAgents);
+    transactionCount.fill(0);
+
+
+
+
+
     //Initialize random number generator
     std::random_device rd;
     std::mt19937_64 gen(rd());
@@ -100,19 +107,21 @@ void transactions(vec& agents, int numTransactions, double lambda, int my_rank, 
         agentI=(int) (RandomNumberGenerator(gen)*numAgents);
         agentJ=(int) (RandomNumberGenerator(gen)*numAgents);
 
-        epsilon=RandomNumberGenerator(gen);
+        if(RandomNumberGenerator(gen)<(agents[agentI]-agents[agentsJ]))
 
-        //Sum of money that both agents have
-        totalMoney=(1-lambda)*(agents[agentI]+agents[agentJ]);
-        //Calculate new values for both agents
-        newAgentI=lambda*agents[agentI]+epsilon*totalMoney;
-        newAgentJ=lambda*agents[agentJ]+(1-epsilon)*totalMoney;
+            epsilon=RandomNumberGenerator(gen);
+
+            //Sum of money that both agents have
+            totalMoney=(1-lambda)*(agents[agentI]+agents[agentJ]);
+            //Calculate new values for both agents
+            newAgentI=lambda*agents[agentI]+epsilon*totalMoney;
+            newAgentJ=lambda*agents[agentJ]+(1-epsilon)*totalMoney;
 
 
-        //Set new values for both agents
-        agents[agentI]=newAgentI;
-        agents[agentJ]=newAgentJ;
-
+            //Set new values for both agents
+            agents[agentI]=newAgentI;
+            agents[agentJ]=newAgentJ;
+            transactionCount[agentI][agentJ]+=1
     }
     /*double sum=0;
     for (int i = 0;i<10;i++){
