@@ -100,6 +100,9 @@ void transactions(vec& agents, int numTransactions, double lambda, int my_rank, 
         agentI=(int) (RandomNumberGenerator(gen)*numAgents);
         agentJ=(int) (RandomNumberGenerator(gen)*numAgents);
 
+        while(agentI==agentJ){
+            agentJ=(int) (RandomNumberGenerator(gen)*numAgents);
+        }
         epsilon=RandomNumberGenerator(gen);
 
         //Sum of money that both agents have
