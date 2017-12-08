@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     }
 
 
-    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; lambda=0.5;
+    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; lambda=0.9 ;
 
     vec histogram(60), agents(numAgents), total_histogram(60);
     int my_experiments=total_experiments/numprocs;

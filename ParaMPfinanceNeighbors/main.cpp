@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 {
     char* outfilename;
     int numAgents, numTransactions, total_experiments, my_rank, numprocs;
-    double initial_money, interval, lambda, alpha;
+    double initial_money, interval, lambda, alpha, gamma;
 
 
     outfilename=argv[1];
@@ -46,7 +46,7 @@ int main(int argc, char* argv[])
     }
 
 
-    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; lambda=0.5; alpha=0;my=0;
+    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; lambda=0.9; alpha=0;gamma=0;
 
     vec histogram(60), agents(numAgents), total_histogram(60);
     int my_experiments=total_experiments/numprocs;
@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
             cout << my_rank<< " " << i<<"\n";
         }
         initialize(agents, initial_money);
-        transactions(agents, numTransactions, lambda, alpha, my, my_rank, numAgents);
+        transactions(agents, numTransactions, lambda, alpha, gamma, my_rank, numAgents);
         addToHistogram(agents, histogram, interval);
 
         for(int j =0; j < 60; j++){
@@ -85,11 +85,11 @@ void initialize(vec& agents, double initial_money){
 }
 
 //Function for simulating the transactions
-void transactions(vec& agents, int numTransactions, double lambda, double alpha, double my, int my_rank, int numAgents){
+void transactions(vec& agents, int numTransactions, double lambda, double alpha, double gamma, int my_rank, int numAgents){
     int agentI, agentJ;
     double epsilon, newAgentI, newAgentJ, totalMoney;
 
-    mat transactionCount(numAgents);
+    mat transactionCount(numAgents, numAgents);
     transactionCount.fill(0);
 
 
@@ -111,7 +111,7 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
             agentJ=(int) (RandomNumberGenerator(gen)*numAgents);
         }
 
-        if(RandomNumberGenerator(gen)<pow((agents[agentI]-agents[agentsJ]), -alpha)*pow((1+transactionCount[I][J]+transactionCount[J][I]),my){
+        if(RandomNumberGenerator(gen)<pow((agents[agentI]-agents[agentJ]), -alpha)*pow((1+transactionCount[agentI,agentJ]+transactionCount[agentJ,agentI]),gamma)){
 
             epsilon=RandomNumberGenerator(gen);
 
@@ -125,18 +125,13 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
             //Set new values for both agents
             agents[agentI]=newAgentI;
             agents[agentJ]=newAgentJ;
-            transactionCount[agentI][agentJ]+=1;
+            transactionCount[agentI,agentJ]+=1;
         }
     }
 
 }
 
 void addToHistogram(vec& agents, vec& histogram, double interval){
-    double max_value=agents.max();
-    //if(max_value/interval>histogram.size()){
-       // histogram.resize(ceil(max_value/interval));
-    //}
-
         for(int l=0;l<agents.size();l++){
             if(agents[l]<3){
                 double index = floor(agents[l]/interval);
