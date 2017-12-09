@@ -7,6 +7,7 @@
 #include <random>
 #include <armadillo>
 #include <string>
+#include <sstream>
 using namespace  std;
 using namespace arma;
 // output file
@@ -31,53 +32,53 @@ int main(int argc, char* argv[])
     int numAgents, numTransactions, total_experiments, my_rank, numprocs;
     double initial_money, interval, lambda, alpha, gamma;
 
-
-    outfilename=argv[1];
-    ofile.open(outfilename);
-
-    //  MPI initializations
-    MPI_Init (&argc, &argv);
-    MPI_Comm_size (MPI_COMM_WORLD, &numprocs);
-    MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);
-    if (my_rank == 0 && argc <= 1) {
-      cout << "Bad Usage: " << argv[0] <<
-        " read output file" << endl;
-      exit(1);
-    }
+            outfilename=argv[1];
+            ofile.open(outfilename);
+            //  MPI initializations
+            MPI_Init (&argc, &argv);
+            MPI_Comm_size (MPI_COMM_WORLD, &numprocs);
+            MPI_Comm_rank (MPI_COMM_WORLD, &my_rank);
+            if (my_rank == 0 && argc <= 1) {
+              cout << "Bad Usage: " << argv[0] <<
+                " read output file" << endl;
+              exit(1);
+            }
 
 
-    interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; lambda=0.9; alpha=0;gamma=0;
+            interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; alpha=0.5; lambda=0.0; gamma=0;
 
-    vec histogram(60), agents(numAgents), total_histogram(60);
-    int my_experiments=total_experiments/numprocs;
-    if(my_rank==1){
-        my_experiments+=total_experiments%numprocs;
-    }
+            vec histogram(2000), agents(numAgents), total_histogram(2000);
+            int my_experiments=total_experiments/numprocs;
+            if(my_rank==1){
+                my_experiments+=total_experiments%numprocs;
+            }
 
-    for(int i=0;i<my_experiments; i++){
-        if(i%25==0){
-            cout << my_rank<< " " << i<<"\n";
-        }
-        initialize(agents, initial_money);
-        transactions(agents, numTransactions, lambda, alpha, gamma, my_rank, numAgents);
-        addToHistogram(agents, histogram, interval);
+            for(int i=0;i<my_experiments; i++){
+                if(i%25==0){
+                    cout << my_rank<< " " << i<<"\n";
+                }
+                initialize(agents, initial_money);
+                transactions(agents, numTransactions, lambda, alpha, gamma, my_rank, numAgents);
+                addToHistogram(agents, histogram, interval);
 
-        for(int j =0; j < 60; j++){
-          MPI_Reduce(&histogram[j], &total_histogram[j], 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-        }
+                for(int j =0; j < 2000; j++){
+                  MPI_Reduce(&histogram[j], &total_histogram[j], 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+                }
 
-    }
-
-
-    //Write to file
-    if(my_rank==0){
-        outputToFile(total_histogram, total_experiments);
-    }
-    // End MPI
-    MPI_Finalize ();
+            }
 
 
-    ofile.close(); // close output file
+            //Write to file
+            if(my_rank==0){
+                outputToFile(total_histogram, total_experiments);
+            }
+            // End MPI
+            MPI_Finalize ();
+
+
+            ofile.close(); // close output file
+
+
 }
 //Function to initialize agents with initial money.
 void initialize(vec& agents, double initial_money){
@@ -87,7 +88,7 @@ void initialize(vec& agents, double initial_money){
 //Function for simulating the transactions
 void transactions(vec& agents, int numTransactions, double lambda, double alpha, double gamma, int my_rank, int numAgents){
     int agentI, agentJ;
-    double epsilon, newAgentI, newAgentJ, totalMoney;
+    double epsilon, newAgentI, newAgentJ, totalMoney, wealthdiff;
 
     mat transactionCount(numAgents, numAgents);
     transactionCount.fill(0);
@@ -111,7 +112,12 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
             agentJ=(int) (RandomNumberGenerator(gen)*numAgents);
         }
 
-        if(RandomNumberGenerator(gen)<pow((agents[agentI]-agents[agentJ]), -alpha)*pow((1+transactionCount[agentI,agentJ]+transactionCount[agentJ,agentI]),gamma)){
+        wealthdiff=abs(agents[agentI]-agents[agentJ]);
+        if(wealthdiff==0){
+            wealthdiff=1;
+        }
+
+        if(RandomNumberGenerator(gen)<2*pow(wealthdiff, -alpha)*pow((1+transactionCount[agentI,agentJ]+transactionCount[agentJ,agentI]),gamma)){
 
             epsilon=RandomNumberGenerator(gen);
 
@@ -133,7 +139,7 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
 
 void addToHistogram(vec& agents, vec& histogram, double interval){
         for(int l=0;l<agents.size();l++){
-            if(agents[l]<3){
+            if(agents[l]<100){
                 double index = floor(agents[l]/interval);
                 histogram[index]+=1;
             }
