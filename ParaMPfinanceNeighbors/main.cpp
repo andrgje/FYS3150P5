@@ -21,10 +21,10 @@ void initialize(vec&, double);
 //Function for simulating the transactions
 void transactions(vec&, int, double, double, double, int, int);
 //Function to register income in given intervals
-void addToHistogram(vec&, vec&, double);
+void addToHistogram(vec&, vec&, double, int);
 //Print the results to file
 void outputToFile(vec&, int);
-
+//Find maximum number of transactions that have occured between to agents
 
 int main(int argc, char* argv[])
 {
@@ -45,23 +45,22 @@ int main(int argc, char* argv[])
             }
 
 
-            interval=0.05; initial_money=1; numAgents=500; numTransactions=10000000; total_experiments=1000; alpha=0.5; lambda=0.0; gamma=0;
+            interval=0.05; initial_money=1; numAgents=1000; numTransactions=100000000; total_experiments=1000; lambda=0; alpha=2; gamma=2.0;
 
-            vec histogram(2000), agents(numAgents), total_histogram(2000);
+            vec histogram(10000), agents(numAgents), total_histogram(10000);
             int my_experiments=total_experiments/numprocs;
             if(my_rank==1){
                 my_experiments+=total_experiments%numprocs;
             }
 
             for(int i=0;i<my_experiments; i++){
-                if(i%25==0){
-                    cout << my_rank<< " " << i<<"\n";
-                }
+
+                cout << my_rank<< " " << i<<"\n";
                 initialize(agents, initial_money);
                 transactions(agents, numTransactions, lambda, alpha, gamma, my_rank, numAgents);
-                addToHistogram(agents, histogram, interval);
+                addToHistogram(agents, histogram, interval, numAgents);
 
-                for(int j =0; j < 2000; j++){
+                for(int j =0; j < 10000; j++){
                   MPI_Reduce(&histogram[j], &total_histogram[j], 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
                 }
 
@@ -90,11 +89,10 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
     int agentI, agentJ;
     double epsilon, newAgentI, newAgentJ, totalMoney, wealthdiff;
 
-    mat transactionCount(numAgents, numAgents);
-    transactionCount.fill(0);
+    mat transactionCount(numAgents, numAgents, fill::zeros);
 
 
-
+    double cmax=transactionCount.max();
 
 
     //Initialize random number generator
@@ -117,7 +115,7 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
             wealthdiff=1;
         }
 
-        if(RandomNumberGenerator(gen)<2*pow(wealthdiff, -alpha)*pow((1+transactionCount[agentI,agentJ]+transactionCount[agentJ,agentI]),gamma)){
+        if(RandomNumberGenerator(gen)<2*pow(wealthdiff, -alpha)*pow((1+transactionCount[agentI,agentJ])/(cmax+1),gamma)){
 
             epsilon=RandomNumberGenerator(gen);
 
@@ -132,14 +130,17 @@ void transactions(vec& agents, int numTransactions, double lambda, double alpha,
             agents[agentI]=newAgentI;
             agents[agentJ]=newAgentJ;
             transactionCount[agentI,agentJ]+=1;
+            transactionCount[agentJ,agentI]+=1;
+            if(transactionCount[agentJ,agentI]>cmax){cmax=transactionCount[agentJ,agentI];}
+
         }
     }
 
 }
 
-void addToHistogram(vec& agents, vec& histogram, double interval){
-        for(int l=0;l<agents.size();l++){
-            if(agents[l]<100){
+void addToHistogram(vec& agents, vec& histogram, double interval, int numAgents){
+        for(int l=0;l<numAgents;l++){
+            if(agents[l]<500){
                 double index = floor(agents[l]/interval);
                 histogram[index]+=1;
             }
